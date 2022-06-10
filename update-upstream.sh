@@ -33,7 +33,7 @@ rm AUTHORS NEWS README THANKS configure.ac Makefile.am meson.build \
     replace-enum-strings.cmake harfbuzz.doap BUILD.md CONFIG.md README.md \
     README.mingw.md README.python.md RELEASING.md TESTING.md git.mk autogen.sh \
     mingw-configure.sh CMakeLists.txt meson_options.txt
-rm -r docs/ m4/ perf/ subprojects/ test/ util/ src/ms-use src/OT
+rm -r docs/ m4/ perf/ subprojects/ test/ util/ src/ms-use
 find ./src -type f \
     ! -iname '*.cc' -a \
     ! -iname '*.hh' -a \
