@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -ex
 
-rm -rf freetype/ harfbuzz/
+rm -rf freetype/ harfbuzz/ brotli/
 git clone --depth 1 --branch VER-2-12-1 https://github.com/freetype/freetype
 git clone --depth 1 --branch 4.3.0 https://github.com/harfbuzz/harfbuzz
+git clone --depth 1 --branch v1.0.9 https://github.com/google/brotli
 
 # --- FreeType ---
 pushd freetype/
@@ -39,4 +40,15 @@ find ./src -type f \
     ! -iname '*.hh' -a \
     ! -iname '*.h' \
     -exec rm -f {} +
+popd
+
+
+# --- Brotli ---
+pushd brotli/
+find -mindepth 1 -maxdepth 1 \
+    ! -iname 'c' -a \
+    ! -iname 'LICENSE' \
+    -exec rm -rf {} +
+mv c/* ./
+rm -rf c fuzz tools
 popd
