@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -ex
+set -e -x
 
 rm -rf freetype/ harfbuzz/ brotli/
 git clone --depth 1 --branch VER-2-12-1 https://github.com/freetype/freetype
@@ -8,15 +8,13 @@ git clone --depth 1 --branch v1.0.9 https://github.com/google/brotli
 
 # --- FreeType ---
 pushd freetype/
-rm -rf .git/ .clang-format .gitlab-ci.yml .mailmap .gitignore .gitmodules
-rm autogen.sh CMakeLists.txt configure Makefile meson.build meson_options.txt \
-    modules.cfg README README.git vms_make.com src/tools/*.c
-rm -r devel/ docs/ objs/ subprojects/ tests/
+ft_delete=($(find -maxdepth 1 | grep -v -E '^./(builds|include|src|LICENSE\.TXT)$'))
+rm -rf "${ft_delete[@]}" || true
+rm src/tools/*.c
 find ./src -type f \
     ! -iname '*.c' -a \
     ! -iname '*.h' \
     -exec rm -f {} +
-
 mv builds/ tmp/
 mkdir -p builds/unix
 mkdir builds/windows
@@ -29,26 +27,16 @@ popd
 
 # --- HarfBuzz ---
 pushd harfbuzz/
-rm -rf .git/ .ci/ .circleci/ .github/ .clang-format .codecov.yml .editorconfig
-rm AUTHORS NEWS README THANKS configure.ac Makefile.am meson.build \
-    replace-enum-strings.cmake harfbuzz.doap BUILD.md CONFIG.md README.md \
-    README.mingw.md README.python.md RELEASING.md TESTING.md git.mk autogen.sh \
-    mingw-configure.sh CMakeLists.txt meson_options.txt
-rm -r docs/ m4/ perf/ subprojects/ test/ util/ src/ms-use
-find ./src -type f \
-    ! -iname '*.cc' -a \
-    ! -iname '*.hh' -a \
-    ! -iname '*.h' \
-    -exec rm -f {} +
+hb_sources=$(grep -o -E 'hb(\-\w+)+' src/harfbuzz.cc | sed 's/^/\.\/src\//' | sed 's/$/\.\(c\|h\|hh\)\$/')
+hb_keep='^\.\/src\/(hb\-version\.h|hb\-deprecated\.h|hb\.h|hb\.hh|harfbuzz\.cc)$'
+hb_delete=($(find | grep -v -E '^./(src|COPYING)$' | grep -v -E "${hb_sources}" | grep -v -E "${hb_keep}"))
+rm -rf "${hb_delete[@]}" || true
 popd
-
 
 # --- Brotli ---
 pushd brotli/
-find -mindepth 1 -maxdepth 1 \
-    ! -iname 'c' -a \
-    ! -iname 'LICENSE' \
-    -exec rm -rf {} +
+brotli_delete=($(find -maxdepth 1 | grep -v -E '^./(c|LICENSE)$'))
+rm -rf "${brotli_delete[@]}" || true
 mv c/* ./
 rm -rf c fuzz tools
 popd
