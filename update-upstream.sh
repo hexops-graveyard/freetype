@@ -27,10 +27,13 @@ popd
 
 # --- HarfBuzz ---
 pushd harfbuzz/
-hb_sources=$(grep -o -E 'hb(\-\w+)+' src/harfbuzz.cc | sed 's/^/\.\/src\//' | sed 's/$/\.\(c\|h\|hh\)\$/')
-hb_keep='^\.\/src\/(hb\-version\.h|hb\-deprecated\.h|hb\.h|hb\.hh|harfbuzz\.cc)$'
-hb_delete=($(find | grep -v -E '^./(src|COPYING)$' | grep -v -E "${hb_sources}" | grep -v -E "${hb_keep}"))
-rm -rf "${hb_delete[@]}" || true
+hb_delete=$( (
+    find | grep -v -E '^./(src(\/OT.*)?|COPYING)$' | grep -v -E '.*\.(cc|h|hh)$'
+    find | grep -E '.*\.(cc|h|hh)$' | grep -E 'test|main.cc'
+) | cat)
+for f in ${hb_delete[@]}; do
+    rm -rf "${f}" || true
+done
 popd
 
 # --- Brotli ---
