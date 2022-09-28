@@ -957,6 +957,10 @@
     /* in the OpenType specification.                  */
 
     varData  = &itemStore->varData[outerIndex];
+
+    if ( varData->regionIdxCount == 0 )
+      return FT_fixedToInt( netAdjustment );
+
     deltaSet = &varData->deltaSet[varData->regionIdxCount * innerIndex];
 
     /* outer loop steps through master designs to be blended */
@@ -1322,22 +1326,25 @@
          FT_FRAME_ENTER( blend->mvar_table->valueCount * GX_VALUE_SIZE ) )
       return;
 
-    value     = blend->mvar_table->values;
-    limit     = value + blend->mvar_table->valueCount;
-    itemStore = &blend->mvar_table->itemStore;
-
-    for ( ; value < limit; value++ )
+    if ( blend->mvar_table->valueCount > 0 )
     {
-      value->tag        = FT_GET_ULONG();
-      value->outerIndex = FT_GET_USHORT();
-      value->innerIndex = FT_GET_USHORT();
+      value     = blend->mvar_table->values;
+      limit     = value + blend->mvar_table->valueCount;
+      itemStore = &blend->mvar_table->itemStore;
 
-      if ( value->outerIndex >= itemStore->dataCount                  ||
-           value->innerIndex >= itemStore->varData[value->outerIndex]
-                                                  .itemCount          )
+      for ( ; value < limit; value++ )
       {
-        error = FT_THROW( Invalid_Table );
-        break;
+        value->tag        = FT_GET_ULONG();
+        value->outerIndex = FT_GET_USHORT();
+        value->innerIndex = FT_GET_USHORT();
+
+        if ( value->outerIndex >= itemStore->dataCount                  ||
+             value->innerIndex >= itemStore->varData[value->outerIndex]
+                                                    .itemCount          )
+        {
+          error = FT_THROW( Invalid_Table );
+          break;
+        }
       }
     }
 
@@ -1348,25 +1355,28 @@
 
     FT_TRACE2(( "loaded\n" ));
 
-    value = blend->mvar_table->values;
-    limit = value + blend->mvar_table->valueCount;
-
-    /* save original values of the data MVAR is going to modify */
-    for ( ; value < limit; value++ )
+    if ( blend->mvar_table->valueCount > 0 )
     {
-      FT_Short*  p = ft_var_get_value_pointer( face, value->tag );
+      value = blend->mvar_table->values;
+      limit = value + blend->mvar_table->valueCount;
+
+      /* save original values of the data MVAR is going to modify */
+      for ( ; value < limit; value++ )
+      {
+        FT_Short*  p = ft_var_get_value_pointer( face, value->tag );
 
 
-      if ( p )
-        value->unmodified = *p;
+        if ( p )
+          value->unmodified = *p;
 #ifdef FT_DEBUG_LEVEL_TRACE
-      else
-        FT_TRACE1(( "ft_var_load_mvar: Ignoring unknown tag `%c%c%c%c'\n",
-                    (FT_Char)( value->tag >> 24 ),
-                    (FT_Char)( value->tag >> 16 ),
-                    (FT_Char)( value->tag >> 8 ),
-                    (FT_Char)( value->tag ) ));
+        else
+          FT_TRACE1(( "ft_var_load_mvar: Ignoring unknown tag `%c%c%c%c'\n",
+                      (FT_Char)( value->tag >> 24 ),
+                      (FT_Char)( value->tag >> 16 ),
+                      (FT_Char)( value->tag >> 8 ),
+                      (FT_Char)( value->tag ) ));
 #endif
+      }
     }
 
     face->variation_support |= TT_FACE_FLAG_VAR_MVAR;
@@ -1413,43 +1423,46 @@
     if ( !( face->variation_support & TT_FACE_FLAG_VAR_MVAR ) )
       return;
 
-    value = blend->mvar_table->values;
-    limit = value + blend->mvar_table->valueCount;
-
-    for ( ; value < limit; value++ )
+    if ( blend->mvar_table->valueCount > 0 )
     {
-      FT_Short*  p = ft_var_get_value_pointer( face, value->tag );
-      FT_Int     delta;
+      value = blend->mvar_table->values;
+      limit = value + blend->mvar_table->valueCount;
 
-
-      delta = ft_var_get_item_delta( face,
-                                     &blend->mvar_table->itemStore,
-                                     value->outerIndex,
-                                     value->innerIndex );
-
-      if ( p )
+      for ( ; value < limit; value++ )
       {
-        FT_TRACE5(( "value %c%c%c%c (%d unit%s) adjusted by %d unit%s (MVAR)\n",
-                    (FT_Char)( value->tag >> 24 ),
-                    (FT_Char)( value->tag >> 16 ),
-                    (FT_Char)( value->tag >> 8 ),
-                    (FT_Char)( value->tag ),
-                    value->unmodified,
-                    value->unmodified == 1 ? "" : "s",
-                    delta,
-                    delta == 1 ? "" : "s" ));
+        FT_Short*  p = ft_var_get_value_pointer( face, value->tag );
+        FT_Int     delta;
 
-        /* since we handle both signed and unsigned values as FT_Short, */
-        /* ensure proper overflow arithmetic                            */
-        *p = (FT_Short)( value->unmodified + (FT_Short)delta );
 
-        /* Treat hasc, hdsc and hlgp specially, see below. */
-        if ( value->tag == MVAR_TAG_HASC )
-          mvar_hasc_delta = (FT_Short)delta;
-        else if ( value->tag == MVAR_TAG_HDSC )
-          mvar_hdsc_delta = (FT_Short)delta;
-        else if ( value->tag == MVAR_TAG_HLGP )
-          mvar_hlgp_delta = (FT_Short)delta;
+        delta = ft_var_get_item_delta( face,
+                                       &blend->mvar_table->itemStore,
+                                       value->outerIndex,
+                                       value->innerIndex );
+
+        if ( p )
+        {
+          FT_TRACE5(( "value %c%c%c%c (%d unit%s) adjusted by %d unit%s (MVAR)\n",
+                      (FT_Char)( value->tag >> 24 ),
+                      (FT_Char)( value->tag >> 16 ),
+                      (FT_Char)( value->tag >> 8 ),
+                      (FT_Char)( value->tag ),
+                      value->unmodified,
+                      value->unmodified == 1 ? "" : "s",
+                      delta,
+                      delta == 1 ? "" : "s" ));
+
+          /* since we handle both signed and unsigned values as FT_Short, */
+          /* ensure proper overflow arithmetic                            */
+          *p = (FT_Short)( value->unmodified + (FT_Short)delta );
+
+          /* Treat hasc, hdsc and hlgp specially, see below. */
+          if ( value->tag == MVAR_TAG_HASC )
+            mvar_hasc_delta = (FT_Short)delta;
+          else if ( value->tag == MVAR_TAG_HDSC )
+            mvar_hdsc_delta = (FT_Short)delta;
+          else if ( value->tag == MVAR_TAG_HLGP )
+            mvar_hlgp_delta = (FT_Short)delta;
+        }
       }
     }
 
