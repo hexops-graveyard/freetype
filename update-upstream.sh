@@ -2,12 +2,13 @@
 set -e -x
 
 rm -rf freetype/ harfbuzz/ brotli/
-git clone --depth 1 --branch VER-2-12-1 https://github.com/freetype/freetype
+git clone --depth 1 https://github.com/freetype/freetype
 git clone --depth 1 --branch 4.3.0 https://github.com/harfbuzz/harfbuzz
 git clone --depth 1 --branch v1.0.9 https://github.com/google/brotli
 
 # --- FreeType ---
 pushd freetype/
+git checkout de8f14a8e41bf5e01714539cbcd3de16d546ce6c
 ft_delete=($(find -maxdepth 1 | grep -v -E '^./(builds|include|src|LICENSE\.TXT)$'))
 rm -rf "${ft_delete[@]}" || true
 rm src/tools/*.c
